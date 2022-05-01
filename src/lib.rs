@@ -13,7 +13,7 @@ pub fn run() -> Result<(), String> {
 
     let mut buffer = Buffer::new(&content);
 
-    Decoder::parse(&mut buffer);
+    // Decoder::parse(&mut buffer);
 
     Ok(())
 }
