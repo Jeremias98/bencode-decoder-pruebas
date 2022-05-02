@@ -105,12 +105,16 @@ impl Decoder {
 
         let word = buffer.take_bytes(lenght);
 
+        println!("LENGTH: {}", lenght);
+
         // Consumo el resto del buffer
         buffer.next(lenght - 1);
 
-        let decoded_string = String::from_utf8(word).unwrap_or("".to_string());
+        match String::from_utf8(word) {
+            Ok(string) => Ok(BencodeElement::String(string)),
+            Err(e) => Ok(BencodeElement::Bytes(e.into_bytes()))
+        }
 
-        Ok(BencodeElement::String(decoded_string))
     }
 
     fn get_bytes(&self, buffer: &mut Buffer, delimiter: u8) -> Vec<u8> {
@@ -185,5 +189,19 @@ mod decode_test {
         let mut buffer = Buffer::new(bytes);
         let decoder = Decoder::new();
         assert_eq!(decoder.parse_dictionary(&mut buffer).unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_ok() {
+        let bytes = "d4:pepe6:binomoe".as_bytes();
+
+        let mut expected_dict: HashMap<String, BencodeElement> = HashMap::new();
+        expected_dict.insert("pepe".to_string(), BencodeElement::String("binomo".to_string()));
+
+        let expected = BencodeElement::Dictionary(expected_dict);
+
+        let mut buffer = Buffer::new(bytes);
+        let decoder = Decoder::new();
+        assert_eq!(decoder.parse(&mut buffer).unwrap(), expected);
     }
 }

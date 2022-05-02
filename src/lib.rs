@@ -1,6 +1,6 @@
 pub mod tools;
 
-use tools::{arg_parser::ArgParser,/* file_reader::FileReader, buffer::Buffer, decoder::Decoder*/ };
+use tools::{arg_parser::ArgParser,file_reader::FileReader, buffer::Buffer, decoder::{Decoder} };
 
 pub fn run() -> Result<(), String> {
     let params = ArgParser::get_params();
@@ -9,11 +9,12 @@ pub fn run() -> Result<(), String> {
         return Err("Debe proveer una ruta para leer el archivo .torrent".to_string());
     }
 
-    // let content = FileReader::read(&params[0])?;
+    let content = FileReader::read(&params[1])?;
 
-    // let mut buffer = Buffer::new(&content);
+    let mut buffer = Buffer::new(&content);
 
-    // Decoder::parse(&mut buffer);
-
+    let decoder = Decoder::new();
+    let result = decoder.parse(&mut buffer)?;
+    println!("{:?}", result);
     Ok(())
 }
