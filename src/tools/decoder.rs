@@ -58,9 +58,13 @@ impl Decoder {
             return Err("buffer cannot be empty".to_string())
         }
 
-        let dictionary: HashMap<String, BencodeElement> = HashMap::new();
+        let mut dictionary: HashMap<String, BencodeElement> = HashMap::new();
         while buffer.get() != Some(&POSTFIX) {
-            let key = self.parse(buffer);
+            let key = self.parse_string(buffer)?;
+            if let BencodeElement::String(k) = key {
+                buffer.next(1);
+                dictionary.insert(k, self.parse(buffer)?);
+            }
             buffer.next(1);
         }
 
@@ -167,5 +171,19 @@ mod decode_test {
         let mut buffer = Buffer::new(bytes);
         let decoder = Decoder::new();
         assert_eq!(decoder.parse_list(&mut buffer).unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_dict_ok() {
+        let bytes = "4:pepe6:binomoe".as_bytes();
+
+        let mut expected_dict: HashMap<String, BencodeElement> = HashMap::new();
+        expected_dict.insert("pepe".to_string(), BencodeElement::String("binomo".to_string()));
+
+        let expected = BencodeElement::Dictionary(expected_dict);
+
+        let mut buffer = Buffer::new(bytes);
+        let decoder = Decoder::new();
+        assert_eq!(decoder.parse_dictionary(&mut buffer).unwrap(), expected);
     }
 }
