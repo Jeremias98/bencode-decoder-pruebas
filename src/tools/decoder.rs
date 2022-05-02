@@ -44,7 +44,7 @@ impl Decoder {
             return None
         }
 
-        let mut dictionary: HashMap<String, BencodeElement> = HashMap::new();
+        let dictionary: HashMap<String, BencodeElement> = HashMap::new();
         while buffer.get() != Some(&POSTFIX) {
             let key = self.parse_string(buffer);
             buffer.next(1);
@@ -59,18 +59,10 @@ impl Decoder {
             return Err("Sin valor".to_string())
         }
 
-        let mut length_bytes: Vec<u8> = Vec::new();
+        let length_bytes: Vec<u8> = self.get_bytes(buffer, STRING_DELIMITER);
 
-        while buffer.get() != Some(&STRING_DELIMITER) {
-            match buffer.get() {
-                Some(value) => length_bytes.push(*value),
-                None => break
-            }
-            buffer.next(1);
-        }
-        
         let lenght: usize = String::from_utf8(length_bytes).unwrap_or("0".to_string()).parse().unwrap_or(0);
-        println!("Largo: {}", lenght);
+        
         // salto los :
         buffer.next(1);
 
@@ -79,6 +71,28 @@ impl Decoder {
         let decoded_string = String::from_utf8(word).unwrap_or("".to_string());
 
         Ok(BencodeElement::String(decoded_string))
+    }
+
+    fn get_bytes(&self, buffer: &mut Buffer, delimiter: u8) -> Vec<u8> {
+        let mut length_bytes: Vec<u8> = Vec::new();
+
+        while buffer.get() != Some(&delimiter) {
+            match buffer.get() {
+                Some(value) => length_bytes.push(*value),
+                None => break
+            }
+            buffer.next(1);
+        }
+
+        length_bytes
+    }
+
+    fn parse_int(&self, buffer: &mut Buffer) -> Result<BencodeElement, String> {
+        let int_bytes = self.get_bytes(buffer, POSTFIX);
+        let decoded_string = String::from_utf8(int_bytes).map(|err| err.to_string()).unwrap();
+        println!("{}", decoded_string);
+        let element = BencodeElement::Integer(decoded_string.parse().unwrap_or(0));
+        Ok(element)
     }
 
 }
@@ -96,5 +110,13 @@ mod decode_test {
         let mut buffer = Buffer::new(bytes);
         let decoder = Decoder::new();
         assert_eq!(decoder.parse_string(&mut buffer).unwrap(), expected);
+    }
+    #[test]
+    fn parse_int_ok() {
+        let bytes = "420e".as_bytes();
+        let expected = BencodeElement::Integer(420);
+        let mut buffer = Buffer::new(bytes);
+        let decoder = Decoder::new();
+        assert_eq!(decoder.parse_int(&mut buffer).unwrap(), expected);
     }
 }
