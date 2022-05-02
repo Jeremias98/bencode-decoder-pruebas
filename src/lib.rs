@@ -2,6 +2,8 @@ pub mod tools;
 
 use tools::{arg_parser::ArgParser,file_reader::FileReader, buffer::Buffer, decoder::{Decoder} };
 
+use crate::tools::decoder::BencodeElement;
+
 pub fn run() -> Result<(), String> {
     let params = ArgParser::get_params();
 
@@ -15,6 +17,11 @@ pub fn run() -> Result<(), String> {
 
     let decoder = Decoder::new();
     let result = decoder.parse(&mut buffer)?;
-    println!("{:?}", result);
+    
+    match result {
+        BencodeElement::Dictionary(dict) => println!("{:?}", dict["announce"]),
+        _ => println!("ppe")
+    }
+
     Ok(())
 }

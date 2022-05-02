@@ -36,17 +36,14 @@ impl Decoder {
                 self.parse_dictionary(buffer)
             },
             Some(&INT_PREFIX) => {
-                println!("{}", "parse int");
                 buffer.next(1);
                 self.parse_int(buffer)
             },
             Some(&LIST_PREFIX) => {
-                println!("{}", "parse list");
                 buffer.next(1);
                 self.parse_list(buffer)
             },
             _ => {
-                println!("{}", "parse string");
                 self.parse_string(buffer)
             }
         }
@@ -79,10 +76,7 @@ impl Decoder {
 
         let mut list: Vec<BencodeElement> = Vec::new();
         while buffer.get() != Some(&POSTFIX) {
-            println!("Position antes: {}", buffer.position());
             let element = self.parse(buffer)?;
-            println!("Position despues: {}", buffer.position());
-            println!("{:?}", element);
             list.push(element);
             buffer.next(1);
         }
@@ -104,8 +98,6 @@ impl Decoder {
         buffer.next(1);
 
         let word = buffer.take_bytes(lenght);
-
-        println!("LENGTH: {}", lenght);
 
         // Consumo el resto del buffer
         buffer.next(lenght - 1);
