@@ -30,4 +30,8 @@ impl<'a> Buffer<'a> {
     pub fn take_bytes(&self, length: usize) -> Vec<u8> {
         Vec::from(&self.bytes[self.position..(self.position+ length)])
     }
+
+    pub fn position(&self) -> usize {
+        self.position
+    }
 }

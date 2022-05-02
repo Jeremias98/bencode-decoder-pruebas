@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap};
 
 use super::buffer::Buffer;
 
@@ -16,7 +16,7 @@ pub enum BencodeElement {
 pub struct Decoder;
 
 const DICTIONARY_PREFIX: u8 = b'd';
-const NUMBER_PREFIX: u8 = b'i';
+const INT_PREFIX: u8 = b'i';
 const LIST_PREFIX: u8 = b'l';
 const STRING_DELIMITER: u8 = b':';
 const POSTFIX: u8 = b'e';
@@ -27,30 +27,63 @@ impl Decoder {
         Decoder {  }
     }
     
-    pub fn parse(&self, buffer: &mut Buffer) -> Option<BencodeElement> {
+    pub fn parse(&self, buffer: &mut Buffer) -> Result<BencodeElement, String> {
         let item = buffer.get();
+
         match item {
             Some(&DICTIONARY_PREFIX) => {
                 buffer.next(1);
                 self.parse_dictionary(buffer)
             },
-            _ => None
+            Some(&INT_PREFIX) => {
+                println!("{}", "parse int");
+                buffer.next(1);
+                self.parse_int(buffer)
+            },
+            Some(&LIST_PREFIX) => {
+                println!("{}", "parse list");
+                buffer.next(1);
+                self.parse_list(buffer)
+            },
+            _ => {
+                println!("{}", "parse string");
+                self.parse_string(buffer)
+            }
         }
     }
 
-    fn parse_dictionary(&self, buffer: &mut Buffer) -> Option<BencodeElement> {
+    fn parse_dictionary(&self, buffer: &mut Buffer) -> Result<BencodeElement, String> {
 
         if buffer.get() == None {
-            return None
+            return Err("buffer cannot be empty".to_string())
         }
 
         let dictionary: HashMap<String, BencodeElement> = HashMap::new();
         while buffer.get() != Some(&POSTFIX) {
-            let key = self.parse_string(buffer);
+            let key = self.parse(buffer);
             buffer.next(1);
         }
 
-        Some(BencodeElement::Dictionary(dictionary))
+        Ok(BencodeElement::Dictionary(dictionary))
+    }
+
+    fn parse_list(&self, buffer: &mut Buffer) -> Result<BencodeElement, String> {
+
+        if buffer.get() == None {
+            return Err("buffer cannot be empty".to_string())
+        }
+
+        let mut list: Vec<BencodeElement> = Vec::new();
+        while buffer.get() != Some(&POSTFIX) {
+            println!("Position antes: {}", buffer.position());
+            let element = self.parse(buffer)?;
+            println!("Position despues: {}", buffer.position());
+            println!("{:?}", element);
+            list.push(element);
+            buffer.next(1);
+        }
+
+        Ok(BencodeElement::List(list))
     }
 
     fn parse_string(&self, buffer: &mut Buffer) -> Result<BencodeElement, String> {
@@ -67,6 +100,9 @@ impl Decoder {
         buffer.next(1);
 
         let word = buffer.take_bytes(lenght);
+
+        // Consumo el resto del buffer
+        buffer.next(lenght - 1);
 
         let decoded_string = String::from_utf8(word).unwrap_or("".to_string());
 
@@ -90,7 +126,6 @@ impl Decoder {
     fn parse_int(&self, buffer: &mut Buffer) -> Result<BencodeElement, String> {
         let int_bytes = self.get_bytes(buffer, POSTFIX);
         let decoded_string = String::from_utf8(int_bytes).map(|err| err.to_string()).unwrap();
-        println!("{}", decoded_string);
         let element = BencodeElement::Integer(decoded_string.parse().unwrap_or(0));
         Ok(element)
     }
@@ -118,5 +153,19 @@ mod decode_test {
         let mut buffer = Buffer::new(bytes);
         let decoder = Decoder::new();
         assert_eq!(decoder.parse_int(&mut buffer).unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_list_ok() {
+        let bytes = "4:pepe6:binomoi666ee".as_bytes();
+        let mut expected_strings = Vec::new();
+        expected_strings.push(BencodeElement::String("pepe".to_string()));
+        expected_strings.push(BencodeElement::String("binomo".to_string()));
+        expected_strings.push(BencodeElement::Integer(666));
+        let expected = BencodeElement::List(expected_strings);
+
+        let mut buffer = Buffer::new(bytes);
+        let decoder = Decoder::new();
+        assert_eq!(decoder.parse_list(&mut buffer).unwrap(), expected);
     }
 }
